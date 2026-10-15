@@ -18,7 +18,21 @@ The visual direction is hand-painted ink and gouache storybook fantasy: dark tea
 | `prop1.png` | 256 × 384 | Transparent mossy forest lantern shrine |
 | `prop2.png` | 256 × 384 | Transparent drowned-archive book shrine |
 | `prop3.png` | 256 × 384 | Transparent celestial furnace brazier |
+| `enemy-sootling.png` | 256 × 256 | Round charcoal forest imp |
+| `enemy-thornling.png` | 256 × 256 | Spiny botanical seed slinger |
+| `enemy-embermoth.png` | 256 × 256 | Glowing moth with ember wing markings |
+| `enemy-stump.png` | 256 × 256 | Heavy walking root stump |
+| `enemy-drownling.png` | 256 × 256 | Pale watery archive ghost |
+| `enemy-scribe.png` | 256 × 256 | Haunted flying book |
+| `enemy-bell.png` | 256 × 256 | Brass diving bell with jellyfish legs |
+| `enemy-jelly.png` | 256 × 256 | Spectral cyan jellyfish |
+| `enemy-spark.png` | 256 × 256 | Jagged fiery imp |
+| `enemy-sentinel.png` | 256 × 256 | Armored floating sun-shield knight |
+| `enemy-comet.png` | 256 × 256 | Fiery dark crystal meteor |
+| `enemy-priest.png` | 256 × 256 | Hooded sun cultist |
 
 Transparent sprites used `varlik image --transparent --trim`. Minor residual magenta key spill around their edges was removed with standard chroma decontamination after generation; this changes only keyed edge pixels, not the generated artwork. Opaque backgrounds and illustrations are unchanged generator output.
+
+Each set of four enemy images used its stage boss image as a `--ref` style reference, while asking for simpler silhouettes and exaggerated eyes that remain readable at small gameplay sizes.
 
 Suggested rendering: tile floor textures under a dark color wash, use stage shrines sparingly behind actors, and draw soft contact shadows underneath sprites in code. The floor images were prompted as tileable; edge matching is approximate, so low-contrast treatment is helpful.
