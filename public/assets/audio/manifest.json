@@ -1,0 +1,166 @@
+{
+  "boss1-death": {
+    "type": "voice",
+    "duration": 4.2,
+    "ogg": "boss1-death.ogg",
+    "mp3": "boss1-death.mp3",
+    "generator": "varlik voice",
+    "voice": "Algenib",
+    "text": "I remember... the warmth."
+  },
+  "boss1-intro": {
+    "type": "voice",
+    "duration": 7.24,
+    "ogg": "boss1-intro.ogg",
+    "mp3": "boss1-intro.mp3",
+    "generator": "varlik voice",
+    "voice": "Algenib",
+    "text": "Little ember. This forest has buried brighter things than you."
+  },
+  "boss1-phase": {
+    "type": "voice",
+    "duration": 4.16,
+    "ogg": "boss1-phase.ogg",
+    "mp3": "boss1-phase.mp3",
+    "generator": "varlik voice",
+    "voice": "Algenib",
+    "text": "Then let the roots remember fire!"
+  },
+  "boss1": {
+    "type": "music",
+    "duration": 30.772,
+    "ogg": "boss1.ogg",
+    "mp3": "boss1.mp3",
+    "generator": "varlik music"
+  },
+  "boss2-death": {
+    "type": "voice",
+    "duration": 4.76,
+    "ogg": "boss2-death.ogg",
+    "mp3": "boss2-death.mp3",
+    "generator": "varlik voice",
+    "voice": "Gacrux",
+    "text": "One story... remains unwritten."
+  },
+  "boss2-intro": {
+    "type": "voice",
+    "duration": 7.88,
+    "ogg": "boss2-intro.ogg",
+    "mp3": "boss2-intro.mp3",
+    "generator": "varlik voice",
+    "voice": "Gacrux",
+    "text": "Hush, little flame. Every story ends beneath the tide."
+  },
+  "boss2-phase": {
+    "type": "voice",
+    "duration": 3.24,
+    "ogg": "boss2-phase.ogg",
+    "mp3": "boss2-phase.mp3",
+    "generator": "varlik voice",
+    "voice": "Gacrux",
+    "text": "Let the drowned pages turn!"
+  },
+  "boss2": {
+    "type": "music",
+    "duration": 30.772,
+    "ogg": "boss2.ogg",
+    "mp3": "boss2.mp3",
+    "generator": "varlik music"
+  },
+  "boss3-death": {
+    "type": "voice",
+    "duration": 4.44,
+    "ogg": "boss3-death.ogg",
+    "mp3": "boss3-death.mp3",
+    "generator": "varlik voice",
+    "voice": "Orus",
+    "text": "So small... so bright."
+  },
+  "boss3-intro": {
+    "type": "voice",
+    "duration": 6.92,
+    "ogg": "boss3-intro.ogg",
+    "mp3": "boss3-intro.mp3",
+    "generator": "varlik voice",
+    "voice": "Orus",
+    "text": "I swallowed the dawn. What can one burnt match do?"
+  },
+  "boss3-phase": {
+    "type": "voice",
+    "duration": 3.72,
+    "ogg": "boss3-phase.ogg",
+    "mp3": "boss3-phase.mp3",
+    "generator": "varlik voice",
+    "voice": "Orus",
+    "text": "All light returns to me!"
+  },
+  "boss3": {
+    "type": "music",
+    "duration": 30.772,
+    "ogg": "boss3.ogg",
+    "mp3": "boss3.mp3",
+    "generator": "varlik music"
+  },
+  "ending": {
+    "type": "voice",
+    "duration": 13.64,
+    "ogg": "ending.ogg",
+    "mp3": "ending.mp3",
+    "generator": "varlik voice",
+    "voice": "Sulafat",
+    "text": "A match only burns once. Or so the world believed. Novaki did not bring back the old sun. He taught the dark to make a little room for everyone."
+  },
+  "intro": {
+    "type": "voice",
+    "duration": 11.0,
+    "ogg": "intro.ogg",
+    "mp3": "intro.mp3",
+    "generator": "varlik voice",
+    "voice": "Sulafat",
+    "text": "They said a burnt match had nothing left to give. But when the last lantern went dark, Novaki still carried a spark."
+  },
+  "menu": {
+    "type": "music",
+    "duration": 30.772,
+    "ogg": "menu.ogg",
+    "mp3": "menu.mp3",
+    "generator": "varlik music"
+  },
+  "novaki-start": {
+    "type": "voice",
+    "duration": 2.16,
+    "ogg": "novaki-start.ogg",
+    "mp3": "novaki-start.mp3",
+    "generator": "varlik voice",
+    "voice": "Puck",
+    "text": "Still got a little spark."
+  },
+  "stage1": {
+    "type": "music",
+    "duration": 30.772,
+    "ogg": "stage1.ogg",
+    "mp3": "stage1.mp3",
+    "generator": "varlik music"
+  },
+  "stage2": {
+    "type": "music",
+    "duration": 30.772,
+    "ogg": "stage2.ogg",
+    "mp3": "stage2.mp3",
+    "generator": "varlik music"
+  },
+  "stage3": {
+    "type": "music",
+    "duration": 30.772,
+    "ogg": "stage3.ogg",
+    "mp3": "stage3.mp3",
+    "generator": "varlik music"
+  },
+  "victory": {
+    "type": "music",
+    "duration": 30.772,
+    "ogg": "victory.ogg",
+    "mp3": "victory.mp3",
+    "generator": "varlik music"
+  }
+}
