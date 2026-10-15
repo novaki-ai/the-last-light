@@ -72,10 +72,13 @@ Boss defeat uses the normal reward, dialogue, and transition path. Allow the dea
 - Strict TypeScript compilation and production build.
 - Chromium desktop, portrait touch, and landscape browser checks, with screenshots and console-error monitoring.
 - Actual keyboard movement and dash; controller API input; touch joystick movement and dash; pause/resume; upgrade choices; settings persistence; permanent purchases; all three boss transitions; defeat and victory.
-- `npm test` runs the browser QA suite against `http://localhost:4173/` (start the dev or preview server first). Set `TEST_URL` to test another server or deployment path.
+- `npm test` starts its own temporary development server and runs the browser QA and focused mechanics suites. Set `TEST_URL` to run browser QA against an existing server or deployment path. The standalone simulation, performance, and live-play scripts expect the development server on port 4173.
 - `node tests/simulation.mjs` runs five accelerated, fixed-step, seeded playthroughs through the real game engine using an automated pilot. It does not grant experience, adjust damage, skip stages, or grant invincibility. `--invincible` explicitly enables a separate progression diagnostic.
 - After balance tuning, two of five fresh, zero-meta automated attempts won, in **17:14** and **18:33** of active gameplay. Successful bosses lasted approximately **29–97 seconds**. The other three attempts died late in the first world. Five invincible progression diagnostics finished in **17:13–20:23**. These are automated-pilot results, not a claim about human difficulty.
 - Repeated seed 42 produced identical gameplay outcomes, upgrade choices, and hit events.
+- Eight focused mechanics regressions cover retaliation, evolution thresholds, rerolls, reward rounding, all boss patterns, postmortem updates, pause, and persistence. A 90-second real-time rendered playtest also ran at 60 FPS without browser errors.
+- The production build passed a nested-path test at `/games/novaki/the-last-light/`: 30 local asset loads, no external requests, no browser errors. Run `node tests/subpath.mjs` after a build.
+- At 1440×900, an Intel Core Ultra 5 125H machine running Chromium with the SwiftShader software GPU measured approximately **60 FPS with 200, 400, and 600 enemies**; p95 frame duration was 16.8 ms after warmup. Run `node tests/performance.mjs` to repeat the benchmark. A separate stage-two boss stress test held **59.3 FPS with 352 enemies and up to 1,395 projectiles** (`node tests/projectile-performance.mjs`). These are measured test cases, not guarantees for every device.
 
 ## Limitations and future improvements
 

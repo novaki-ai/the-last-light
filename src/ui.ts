@@ -1,71 +1,421 @@
 import { Game, type Screen } from './game';
 import { UPGRADES, STAGES, META_UPGRADES, EVOLUTIONS, ENEMIES } from './content';
 import { saveGame } from './storage';
-const img=(name:string)=>`${import.meta.env.BASE_URL}assets/images/${name}`;
-const clock=(seconds:number)=>`${Math.floor(seconds/60).toString().padStart(2,'0')}:${Math.floor(seconds%60).toString().padStart(2,'0')}`;
-const roman=(n:number)=>['','I','II','III','IV','V'][n]||String(n);
+const img = (name: string) => `${import.meta.env.BASE_URL}assets/images/${name}`;
+const clock = (seconds: number) =>
+  `${Math.floor(seconds / 60)
+    .toString()
+    .padStart(2, '0')}:${Math.floor(seconds % 60)
+    .toString()
+    .padStart(2, '0')}`;
+const roman = (n: number) => ['', 'I', 'II', 'III', 'IV', 'V'][n] || String(n);
 export class UI {
-  root:HTMLElement;game:Game;lastHUD=0;codexTab='evolutions';
-  constructor(game:Game){this.game=game;this.root=document.getElementById('ui')!;game.onScreen=()=>this.render();game.onUpdate=()=>this.update(0,true);this.root.addEventListener('click',e=>{const el=(e.target as HTMLElement).closest<HTMLElement>('[data-action]');if(el)this.action(el.dataset.action!,el.dataset.value);});this.root.addEventListener('input',e=>{const el=e.target as HTMLInputElement;const key=el.dataset.setting as 'music'|'sound'|'voice';if(key){game.save.settings[key]=Number(el.value)/100;game.audio.updateSettings();saveGame(game.save);const output=el.parentElement?.querySelector('output');if(output)output.textContent=`${el.value}%`;}});window.addEventListener('keydown',e=>{if(e.code==='Escape'&&['settings','help','meta','codex'].includes(game.screen)){e.preventDefault();this.back();}if(e.code==='Enter'&&game.screen==='intro')game.finishIntro();});this.render();}
-  button(label:string,action:string,classes='',value=''){return `<button class="${classes}" data-action="${action}"${value?` data-value="${value}"`:''}>${label}</button>`;}
-  action(action:string,value?:string){const g=this.game;g.audio.unlock();g.audio.sfx('click');switch(action){
-    case 'new':g.start({intro:!g.save.seenIntro});break;
-    case 'start':g.finishIntro();break;
-    case 'pause':g.pause();break;
-    case 'resume':g.resume();break;
-    case 'quit':g.abandon();break;
-    case 'menu':g.audio.stopVoice();g.subtitle.timer=0;g.previousScreen='menu';g.setScreen('menu');g.audio.playMusic('menu');break;
-    case 'retry':g.start({intro:false});break;
-    case 'settings':case 'help':case 'meta':case 'codex':g.previousScreen=g.screen;g.setScreen(action);break;
-    case 'back':this.back();break;
-    case 'upgrade':g.chooseUpgrade(Number(value));break;
-    case 'reroll':g.reroll();break;
-    case 'continue':g.nextStage();break;
-    case 'buy':g.buyMeta(value!);break;
-    case 'weapon':if(g.save.meta.unlocks.includes(value!)){g.startingWeapon=value!;this.render();}break;
-    case 'toggle':{const k=value as 'shake'|'particles';g.save.settings[k]=!g.save.settings[k];saveGame(g.save);this.render();break;}
-    case 'tab':this.codexTab=value!;this.render();break;
-    case 'story':g.start({intro:true});break;
-  }}
-  back(){const g=this.game;const s=g.previousScreen;g.previousScreen='menu';g.setScreen(s==='paused'?'paused':s==='gameover'?'gameover':s==='victory'?'victory':'menu');}
-  render(){const g=this.game;document.body.dataset.screen=g.screen;document.getElementById('touch-controls')!.classList.toggle('active',g.screen==='playing');
-    if(g.screen==='playing'){this.renderHUD();return;}
-    if(g.screen==='menu'){this.root.innerHTML=this.menu();}
-    else if(g.screen==='intro'){this.root.innerHTML=this.story();}
-    else if(g.screen==='levelup'){this.root.innerHTML=this.levelup();}
-    else if(g.screen==='paused'){this.root.innerHTML=this.pause();}
-    else if(g.screen==='settings'){this.root.innerHTML=this.settings();}
-    else if(g.screen==='help'){this.root.innerHTML=this.help();}
-    else if(g.screen==='meta'){this.root.innerHTML=this.meta();}
-    else if(g.screen==='codex'){this.root.innerHTML=this.codex();}
-    else if(g.screen==='transition'){this.root.innerHTML=this.transition();}
-    else if(g.screen==='gameover'||g.screen==='victory'){this.root.innerHTML=this.ending(g.screen==='victory');}
-    requestAnimationFrame(()=>{const auto=this.root.querySelector<HTMLElement>('[data-autofocus]');auto?.focus({preventScroll:true});});
+  root: HTMLElement;
+  game: Game;
+  lastHUD = 0;
+  codexTab = 'evolutions';
+  constructor(game: Game) {
+    this.game = game;
+    this.root = document.getElementById('ui')!;
+    game.onScreen = () => this.render();
+    game.onUpdate = () => this.update(0, true);
+    this.root.addEventListener('click', (e) => {
+      const el = (e.target as HTMLElement).closest<HTMLElement>('[data-action]');
+      if (el) this.action(el.dataset.action!, el.dataset.value);
+    });
+    this.root.addEventListener('input', (e) => {
+      const el = e.target as HTMLInputElement;
+      const key = el.dataset.setting as 'music' | 'sound' | 'voice';
+      if (key) {
+        game.save.settings[key] = Number(el.value) / 100;
+        game.audio.updateSettings();
+        saveGame(game.save);
+        const output = el.parentElement?.querySelector('output');
+        if (output) output.textContent = `${el.value}%`;
+      }
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Escape' && ['settings', 'help', 'meta', 'codex'].includes(game.screen)) {
+        e.preventDefault();
+        this.back();
+      }
+      if (e.code === 'Enter' && game.screen === 'intro') game.finishIntro();
+    });
+    this.render();
   }
-  brand(){return `<div class="brand"><span class="brand-mark">✦</span><span>NOVAKI<small>A LITTLE LIGHT GOES A LONG WAY</small></span></div>`;}
-  menu(){const g=this.game;return `<main class="menu-screen screen"><div class="illustration title-art"></div><div class="menu-wash"></div><header class="menu-header">${this.brand()}<div class="edition">AN EMBERBOUND ADVENTURE<span>VOLUME 01</span></div></header><section class="menu-content"><div class="eyebrow"><span></span> A SMALL HERO. AN IMPOSSIBLE DAWN.</div><h1>The Last<br><em>Light.</em></h1><p class="menu-description">A burnt match. A stolen sun.<br>There’s still a little fire in you.</p><div class="menu-actions">${this.button('<span>Begin your journey<small>A NEW RUN · ABOUT 20 MINUTES</small></span><b>↗</b>','new','primary start-button')}<div class="menu-second">${this.button('The hearth <span>✧ '+g.save.meta.currency+'</span>','meta','secondary')}${this.button('Field notes <span>↗</span>','codex','secondary')}</div></div>${g.save.meta.unlocks.length>1?`<div class="starter"><span>FIRST SPARK</span>${['kindling','orbit','frost'].map(id=>{const u=UPGRADES.find(u=>u.id===id)!;return `<button class="starter-option ${g.startingWeapon===id?'selected':''}" ${g.save.meta.unlocks.includes(id)?`data-action="weapon" data-value="${id}"`:'disabled'} title="${u.name}">${u.icon}</button>`;}).join('')}</div>`:''}<div class="menu-links">${this.button('How to play','help','text-button')}${this.button('Settings','settings','text-button')}<span class="saved-tag">${g.save.meta.totalRuns?'PROGRESS SAVED LOCALLY':'KEYBOARD · CONTROLLER · TOUCH'}</span></div></section><footer class="menu-footer"><span>THREE WORLDS TO REKINDLE.</span><span class="footer-line"></span><span>ONE SMALL LIGHT TO KEEP.</span><span class="version">NOVAKI / 01</span></footer><div class="hero-caption"><span>“Still got a little spark.”</span><small>— NOVAKI</small></div></main>`;}
-  story(){return `<main class="screen story-screen"><div class="illustration title-art"></div><div class="menu-wash"></div><div class="story-card"><div class="eyebrow">PROLOGUE · THE THINGS WE KEEP</div><h1>Even a burnt match<br>remembers <em>fire.</em></h1><p>They said a burnt match had nothing left to give.</p><p>But when the last lantern went dark,<br>Novaki still carried a spark.</p><div class="story-rule"></div><p class="muted">Cross three forgotten worlds. Return their stolen light.<br>And find out what one little ember can do.</p>${this.button('Carry the spark <span>↗</span>','start','primary')}<small class="story-note">MOVE WITH WASD OR ARROWS · YOUR WEAPONS FIRE AUTOMATICALLY</small></div><div class="narration-indicator"><span></span> A STORY TOLD BY THE FIRE</div></main>`;}
-  renderHUD(){this.root.innerHTML=`<div class="hud"><div class="xp-track"><div id="xp-fill"></div></div><header class="hud-top"><div class="stage-label"><span id="chapter-label"></span><strong id="stage-name"></strong><small id="objective-label"></small></div><div class="run-time"><span id="run-clock">00:00</span><small id="wave-clock"></small></div><div class="vitals"><div class="health-label"><span>✦ NOVAKI</span><span id="health-number"></span></div><div class="health-track"><div id="health-fill"></div></div><div class="vitals-bottom"><span id="level-label"></span><span id="kill-label"></span></div></div>${this.button('Ⅱ','pause','pause-button')}</header><div class="boss-hud" id="boss-hud"><div><span id="boss-name"></span><span id="boss-phase"></span></div><div class="boss-track"><div id="boss-fill"></div></div></div><div class="chapter-banner" id="chapter-banner"><small></small><h2></h2><i></i></div><div class="game-toast" id="game-toast"><span>✧</span><div><strong></strong><small></small></div></div><div class="subtitle" id="subtitle"><small></small><p></p></div><footer class="hud-bottom"><div class="loadout"><div class="loadout-title"><span>YOUR LIGHT</span><span id="run-embers"></span></div><div class="weapon-slots" id="weapon-slots"></div><div class="passive-slots" id="passive-slots"></div></div><div class="control-hint" id="control-hint"><kbd>W A S D</kbd> MOVE <span>·</span> <kbd>SPACE</kbd> DASH <span>·</span> <kbd>ESC</kbd> PAUSE</div><div class="dash-display"><div class="dash-icon" id="dash-icon">↗<svg viewBox="0 0 60 60"><circle class="dash-track" cx="30" cy="30" r="27"/><circle id="dash-ring" cx="30" cy="30" r="27"/></svg></div><div><strong id="dash-text">DASH READY</strong><small>SPACE / A</small></div></div></footer><div class="tutorial-tip" id="tutorial-tip"><span>✦</span> Collect the green sparks to grow stronger.<small>Stay moving. Your weapons take care of the rest.</small></div></div>`;this.update(0,true);}
-  update(now:number,force=false){const g=this.game;if(g.screen!=='playing')return;if(!force&&now-this.lastHUD<80)return;this.lastHUD=now;const p=g.player;const set=(id:string,text:string)=>{const e=document.getElementById(id);if(e&&e.textContent!==text)e.textContent=text;};
-    set('chapter-label',`CHAPTER ${roman(g.stage)} / III`);set('stage-name',g.stageDef.name);set('objective-label',g.boss?'RETURN THE STOLEN LIGHT':g.bossDefeated?'THE DARKNESS IS LIFTING':'SURVIVE UNTIL THE GUARDIAN WAKES');set('run-clock',clock(g.time));set('wave-clock',g.boss?'GUARDIAN ENCOUNTER':g.bossDefeated?'LIGHT RETURNED':`${clock(Math.max(0,g.stageDef.duration-g.stageTime))} TO GUARDIAN`);set('health-number',`${Math.ceil(p.hp)} / ${p.maxHp}`);set('level-label',`LEVEL ${p.level}`);set('kill-label',`${g.stats.kills} VANQUISHED`);set('run-embers',`✧ ${Math.floor(g.stats.earned)}`);
-    document.getElementById('health-fill')!.style.width=`${p.hp/p.maxHp*100}%`;document.getElementById('health-fill')!.classList.toggle('low',p.hp/p.maxHp<.3);document.getElementById('xp-fill')!.style.width=`${Math.min(100,p.xp/p.nextXp*100)}%`;
-    const boss=document.getElementById('boss-hud')!;boss.classList.toggle('visible',!!g.boss);if(g.boss){set('boss-name',g.stageDef.bossName);set('boss-phase',g.boss.phase===1?'GUARDIAN':'ENRAGED');document.getElementById('boss-fill')!.style.width=`${g.boss.hp/g.boss.maxHp*100}%`;}
-    const banner=document.getElementById('chapter-banner')!;banner.classList.toggle('visible',g.banner.timer>0);banner.querySelector('h2')!.textContent=g.banner.title;banner.querySelector('small')!.textContent=g.banner.subtitle;
-    const toast=document.getElementById('game-toast')!;toast.classList.toggle('visible',g.toast.timer>0);toast.querySelector('strong')!.textContent=g.toast.title;toast.querySelector('small')!.textContent=g.toast.text;
-    const sub=document.getElementById('subtitle')!;sub.classList.toggle('visible',g.subtitle.timer>0);sub.querySelector('small')!.textContent=g.subtitle.speaker;sub.querySelector('p')!.textContent=g.subtitle.text;
-    set('dash-text',p.dashCd<=0?'DASH READY':`${p.dashCd.toFixed(1)} SEC`);document.getElementById('dash-icon')!.classList.toggle('ready',p.dashCd<=0);document.getElementById('dash-ring')!.style.strokeDashoffset=String(170*p.dashCd/p.dashMax);const touch=document.getElementById('touch-dash')!;touch.classList.toggle('cooldown',p.dashCd>0);touch.querySelector('small')!.textContent=p.dashCd>0?p.dashCd.toFixed(1):'DASH';
-    const weaponHTML=Object.entries(g.upgrades).filter(([id])=>UPGRADES.find(u=>u.id===id)?.kind==='weapon').map(([id,lv])=>{const u=UPGRADES.find(u=>u.id===id)!;return `<div class="weapon-slot ${g.isEvolved(id)?'evolved':''}" title="${u.name} · Rank ${lv}${g.isEvolved(id)?' · Evolved':''}" style="--item-color:${u.color}"><span>${u.icon}</span><small>${g.isEvolved(id)?'✦':roman(lv)}</small></div>`;}).join('');const weapons=document.getElementById('weapon-slots')!;const allWeaponHTML=weaponHTML+Array.from({length:6-Object.keys(g.upgrades).filter(id=>UPGRADES.find(u=>u.id===id)?.kind==='weapon').length},()=>'<div class="weapon-slot empty">·</div>').join('');if(weapons.innerHTML!==allWeaponHTML)weapons.innerHTML=allWeaponHTML;
-    const passives=Object.entries(g.upgrades).filter(([id])=>UPGRADES.find(u=>u.id===id)?.kind==='passive').map(([id,lv])=>{const u=UPGRADES.find(u=>u.id===id)!;return `<span title="${u.name} · Rank ${lv}" style="color:${u.color}">${u.icon}<small>${lv}</small></span>`;}).join('');const passiveEl=document.getElementById('passive-slots')!;if(passiveEl.innerHTML!==passives)passiveEl.innerHTML=passives;
-    document.getElementById('tutorial-tip')!.classList.toggle('visible',g.time>5&&g.time<17);document.getElementById('control-hint')!.style.opacity=g.time>45?'0':'1';
+  button(label: string, action: string, classes = '', value = '') {
+    return `<button class="${classes}" data-action="${action}"${value ? ` data-value="${value}"` : ''}>${label}</button>`;
   }
-  levelup(){const g=this.game;return `<main class="overlay levelup-screen"><div class="levelup-heading"><div class="eyebrow">LEVEL ${g.player.level} · A LITTLE BRIGHTER</div><h1>Feed the <em>flame.</em></h1><p>Choose a gift to carry into the dark.</p></div><div class="upgrade-cards">${g.choices.map((u,i)=>{const lv=g.upgrades[u.id]||0;const evo=EVOLUTIONS.find(e=>e.weapon===u.id||e.passive===u.id);const pair=evo?UPGRADES.find(t=>t.id===(evo.weapon===u.id?evo.passive:evo.weapon)):null;const canEvolve=evo&&(g.upgrades[evo.weapon]||0)+(u.id===evo.weapon?1:0)>=5&&(g.upgrades[evo.passive]||0)+(u.id===evo.passive?1:0)>=2;return `<button class="upgrade-card ${canEvolve?'evolution-ready':''}" data-action="upgrade" data-value="${i}" style="--item-color:${u.color}"><div class="card-top"><span>${lv?'ENHANCE':u.kind==='weapon'?'NEW WEAPON':'NEW KEEPSAKE'}</span><span class="choice-key">${i+1}</span></div><div class="upgrade-icon">${u.icon}<i></i></div><div class="card-type">${u.kind==='weapon'?'ARMAMENT':'PASSIVE'} <span>RANK ${roman(lv+1)}</span></div><h2>${u.name}</h2><p class="upgrade-description">${u.description}</p><p class="upgrade-value">${u.perLevel}</p><div class="rank-pips">${Array.from({length:u.maxLevel>5?1:u.maxLevel},(_,n)=>`<i class="${n<lv?'filled':n===lv?'next':''}"></i>`).join('')}</div><div class="synergy">${canEvolve?`<b>✦ EVOLVES INTO ${evo!.name.toUpperCase()}</b>`:pair?`<span>✧ EVOLUTION PAIR</span><strong>${pair.icon} ${pair.name}</strong>`:`<span>✧ A GIFT FROM THE DARK</span>`}</div><div class="card-select">TAKE THIS GIFT <span>↗</span></div></button>`;}).join('')}</div><div class="reroll-row"><button class="text-button reroll-button" data-action="reroll" ${g.rerolls<=0?'disabled':''}>↻  FIND ANOTHER SPARK <span>${g.rerolls} LEFT</span></button></div><p class="levelup-note">Weapons at rank V evolve with their paired keepsake at rank II. <span>CHOOSE WITH 1 · 2 · 3</span></p></main>`;}
-  frame(content:string,wide=false){return `<main class="overlay page-overlay ${['menu','gameover','victory'].includes(this.game.previousScreen)?'menu-page':''}"><section class="panel ${wide?'wide-panel':''}">${content}</section></main>`;}
-  pageHead(eyebrow:string,title:string){return `<div class="panel-head"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1></div>${this.button('← Back','back','text-button back-button')}</div>`;}
-  pause(){const g=this.game;const owned=Object.entries(g.upgrades).map(([id,lv])=>{const u=UPGRADES.find(u=>u.id===id);return u?`<span title="${u.description}" style="--item-color:${u.color}"><b>${u.icon}</b>${u.name}<small>${roman(lv)}${g.isEvolved(id)?' ✦':''}</small></span>`:'';}).join('');return this.frame(`<div class="eyebrow">TAKE A BREATH</div><h1>Keep the <em>light.</em></h1><p class="muted">${g.stageDef.name} · ${clock(g.time)} · Level ${g.player.level}</p><div class="pause-buttons">${this.button('Return to the fire <span>↗</span>','resume','primary')}${this.button('Settings','settings','secondary')}${this.button('How to play','help','secondary')}${this.button('Evolution guide','codex','secondary')}</div><div class="pause-loadout">${owned}</div>${this.button('End this run & keep embers','quit','text-button abandon')}<p class="footnote">Progress pauses here. Your embers are banked when the run ends.</p>`);}
-  settings(){const s=this.game.save.settings;return this.frame(`${this.pageHead('MAKE YOURSELF AT HOME','A little <em>comfort.</em>')}<div class="settings-list">${[['music','Music','Original scores for every world.'],['sound','Sound effects','Sparks, impacts, and little victories.'],['voice','Voice & narration','The dark has a few things to say.']].map(([key,label,hint])=>`<label class="setting-range"><div><strong>${label}</strong><small>${hint}</small></div><div class="range-control"><input type="range" min="0" max="100" value="${Math.round((s[key as 'music'])*100)}" data-setting="${key}" aria-label="${label} volume"><output>${Math.round(s[key as 'music']*100)}%</output></div></label>`).join('')}${[['shake','Screen shake','A little impact when the world strikes.'],['particles','Extra particles','Turn off for a quieter, faster battlefield.']].map(([key,label,hint])=>`<div class="setting-toggle"><div><strong>${label}</strong><small>${hint}</small></div><button class="toggle ${s[key as 'shake']?'on':''}" data-action="toggle" data-value="${key}" role="switch" aria-checked="${s[key as 'shake']}" aria-label="${label}"><span></span>${s[key as 'shake']?'ON':'OFF'}</button></div>`).join('')}</div><p class="footnote">Settings are saved automatically in this browser.</p>`);}
-  help(){return this.frame(`${this.pageHead('THE ART OF STAYING ALIGHT','One small <em>spark.</em>')}<div class="help-grid"><article><div class="help-num">01</div><h2>Keep moving.</h2><p>Your weapons aim and fire automatically. Circle the horde, leave yourself an escape, and dash through danger.</p><div class="key-row"><kbd>W A S D</kbd><span>or</span><kbd>↑ ← ↓ →</kbd></div><small>LEFT STICK / D-PAD · ON-SCREEN JOYSTICK</small></article><article><div class="help-num">02</div><h2>Find your opening.</h2><p>Dash briefly makes you invulnerable. Red circles warn of incoming attacks. Get clear before they fill.</p><div class="key-row"><kbd>SPACE</kbd><span>or</span><kbd>SHIFT</kbd></div><small>CONTROLLER A / RB · TOUCH DASH BUTTON</small></article><article><div class="help-num">03</div><h2>Feed the flame.</h2><p>Collect green experience sparks. Choose a gift each level. Carry up to six weapons and combine them with keepsakes.</p><div class="key-row"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><span>choose a gift</span></div><small>RANK V WEAPON + RANK II PAIRED KEEPSAKE = EVOLUTION</small></article><article><div class="help-num">04</div><h2>Bring back the dawn.</h2><p>Survive five minutes in each world, then defeat its guardian. Rekindle lanterns for healing and embers. Beat the third guardian to win.</p><div class="key-row"><kbd>ESC</kbd><span>pause anytime</span></div><small>EMBER CURRENCY PERSISTS · VISIT THE HEARTH BETWEEN RUNS</small></article></div><div class="help-footer"><p>Controllers: D-pad navigates menus, A confirms, B goes back, Start pauses.<br>On a phone, use the left joystick and right dash button. Landscape gives you a wider view.</p>${this.game.previousScreen==='paused'?'':this.button('Replay the prologue','story','text-button')}</div>`,true);}
-  meta(){const g=this.game;return this.frame(`${this.pageHead('SOMETHING TO COME HOME TO','The <em>hearth.</em>')}<div class="hearth-intro"><p>Every journey leaves an ember.<br>Make the next one a little brighter.</p><div class="currency-count">✧ <strong>${g.save.meta.currency}</strong><small>EMBERS TO KEEP</small></div></div><div class="meta-grid">${META_UPGRADES.map(m=>{const lv=g.save.meta.upgrades[m.id]||0,cost=m.baseCost+m.stepCost*lv,max=lv>=m.maxLevel;return `<div class="meta-card"><span class="meta-icon">${m.icon}</span><div><h2>${m.name}</h2><p>${m.description}</p><div class="meta-pips">${Array.from({length:m.maxLevel},(_,i)=>`<i class="${i<lv?'filled':''}"></i>`).join('')}</div></div><button class="meta-buy ${max?'maxed':''}" data-action="buy" data-value="${m.id}" ${max||g.save.meta.currency<cost?'disabled':''}>${max?'KEPT':`✧ ${cost}`}<small>${max?'MAX RANK':'UPGRADE'}</small></button></div>`;}).join('')}</div><div class="hearth-stats"><span><strong>${g.save.meta.totalRuns}</strong> JOURNEYS</span><span><strong>${g.save.meta.wins}</strong> DAWNS RETURNED</span><span><strong>${g.save.meta.totalKills.toLocaleString()}</strong> SHADOWS FACED</span></div><p class="footnote">Permanent upgrades apply at the start of your next run. Defeat guardians to unlock new starting weapons.</p>`,true);}
-  codex(){const tabs=`<div class="codex-tabs">${[['evolutions','Evolutions'],['worlds','The three worlds'],['bestiary','The things in the dark']].map(([id,name])=>this.button(name,'tab',this.codexTab===id?'active':'',id)).join('')}</div>`;let content='';if(this.codexTab==='evolutions'){content=`<p class="codex-intro">Every weapon has a brighter future. Reach weapon rank <b>V</b> and its paired keepsake rank <b>II</b> to evolve automatically.</p><div class="evolution-grid">${EVOLUTIONS.map(e=>{const w=UPGRADES.find(u=>u.id===e.weapon)!,p=UPGRADES.find(u=>u.id===e.passive)!;return `<article class="evolution-entry"><span class="evolution-symbol" style="color:${e.color}">${w.icon}</span><div><small>${w.name} <b>V</b> + ${p.name} <b>II</b></small><h3>${e.name}</h3><p>${e.description}</p></div></article>`;}).join('')}</div>`;}else if(this.codexTab==='worlds'){content=`<div class="world-grid">${STAGES.map(s=>`<article><img src="${img(`boss${s.id}.png`)}" alt="${s.bossName}"><div class="eyebrow">CHAPTER ${roman(s.id)}</div><h2>${s.name}</h2><p>${s.description}</p><small>GUARDED BY ${s.bossName.toUpperCase()}</small></article>`).join('')}</div>`;}else{content=`<div class="bestiary-grid">${ENEMIES.map(e=>`<article><span style="color:${e.accent}">◇</span><div><small>CHAPTER ${roman(e.stage)}</small><h3>${e.name}</h3><p>${e.description}</p></div></article>`).join('')}</div>`;}return this.frame(`${this.pageHead('NOTES FROM THE EDGE OF DARKNESS','A field <em>guide.</em>')}${tabs}${content}`,true);}
-  transition(){const g=this.game,next=STAGES[g.stage];return `<main class="overlay transition-screen"><div class="transition-art"><img src="${img(`prop${g.stage}.png`)}" alt="A rekindled lantern"></div><div class="eyebrow">CHAPTER ${roman(g.stage)} COMPLETE</div><h1>A little less <em>darkness.</em></h1><p>${g.stageDef.story}</p><div class="chapter-path">${STAGES.map((s,i)=>`<div class="${i<g.stage?'done':''} ${i===g.stage?'next':''}"><span>${i<g.stage?'✦':roman(i+1)}</span><small>${s.name}</small></div>`).join('<i></i>')}</div><div class="transition-reward">✧ ${60+g.stage*30} EMBERS KEPT <span>·</span> HEALTH RESTORED</div>${this.button(`Enter ${next.name} <span>↗</span>`,'continue','primary')}<p class="footnote">Your gifts travel with you. The next light is waiting.</p></main>`;}
-  ending(victory:boolean){const g=this.game,s=g.stats;return `<main class="screen end-screen ${victory?'victory-screen':''}"><div class="illustration ${victory?'ending-art':'title-art'}"></div><div class="end-wash"></div><section class="end-content"><div class="eyebrow">${victory?'THREE LIGHTS RETURNED · ONE NEW DAWN':'THE FIRE RESTS. THE EMBER REMAINS.'}</div><h1>${victory?'You made<br><em>room for light.</em>':'Even embers<br><em>begin again.</em>'}</h1><p class="ending-prose">${victory?'A match only burns once. Or so the world believed.<br>Novaki taught the dark to make a little room for everyone.':'The dark was a little too deep this time.<br>But nothing you carried home was lost.'}</p><div class="result-stats"><div><strong>${clock(g.time)}</strong><span>TIME ALIGHT</span></div><div><strong>${s.kills.toLocaleString()}</strong><span>SHADOWS FACED</span></div><div><strong>${s.bosses} / 3</strong><span>LIGHTS RETURNED</span></div><div><strong>${g.player.level}</strong><span>FINAL LEVEL</span></div><div><strong>${g.evolved.size}</strong><span>EVOLUTIONS</span></div><div class="earned"><strong>✧ ${Math.floor(s.earned)}</strong><span>EMBERS BANKED</span></div></div><div class="end-loadout">${Object.entries(g.upgrades).filter(([id])=>UPGRADES.find(u=>u.id===id)?.kind==='weapon').map(([id,lv])=>{const u=UPGRADES.find(u=>u.id===id)!;return `<span title="${u.name} rank ${lv}" style="color:${u.color}">${u.icon}<small>${g.isEvolved(id)?'✦':roman(lv)}</small></span>`;}).join('')}</div><div class="end-actions">${this.button(victory?'One more little spark ↗':'Try again ↗','retry','primary')}${this.button('Visit the hearth','meta','secondary')}${this.button('Main menu','menu','text-button')}</div><p class="footnote">${victory?'THE END · THANK YOU FOR CARRYING THE SPARK':'Your permanent upgrades and embers are saved in this browser.'}</p></section></main>`;}
+  action(action: string, value?: string) {
+    const g = this.game;
+    g.audio.unlock();
+    g.audio.sfx('click');
+    switch (action) {
+      case 'new':
+        g.start({ intro: !g.save.seenIntro });
+        break;
+      case 'start':
+        g.finishIntro();
+        break;
+      case 'pause':
+        g.pause();
+        break;
+      case 'resume':
+        g.resume();
+        break;
+      case 'quit':
+        g.abandon();
+        break;
+      case 'menu':
+        g.audio.stopVoice();
+        g.subtitle.timer = 0;
+        g.previousScreen = 'menu';
+        g.setScreen('menu');
+        g.audio.playMusic('menu');
+        break;
+      case 'retry':
+        g.start({ intro: false });
+        break;
+      case 'settings':
+      case 'help':
+      case 'meta':
+      case 'codex':
+        g.previousScreen = g.screen;
+        g.setScreen(action);
+        break;
+      case 'back':
+        this.back();
+        break;
+      case 'upgrade':
+        g.chooseUpgrade(Number(value));
+        break;
+      case 'reroll':
+        g.reroll();
+        break;
+      case 'continue':
+        g.nextStage();
+        break;
+      case 'buy':
+        g.buyMeta(value!);
+        break;
+      case 'weapon':
+        if (g.save.meta.unlocks.includes(value!)) {
+          g.startingWeapon = value!;
+          this.render();
+        }
+        break;
+      case 'toggle': {
+        const k = value as 'shake' | 'particles';
+        g.save.settings[k] = !g.save.settings[k];
+        saveGame(g.save);
+        this.render();
+        break;
+      }
+      case 'tab':
+        this.codexTab = value!;
+        this.render();
+        break;
+      case 'story':
+        g.start({ intro: true });
+        break;
+    }
+  }
+  back() {
+    const g = this.game;
+    const s = g.previousScreen;
+    g.previousScreen = 'menu';
+    g.setScreen(
+      s === 'paused'
+        ? 'paused'
+        : s === 'gameover'
+          ? 'gameover'
+          : s === 'victory'
+            ? 'victory'
+            : 'menu',
+    );
+  }
+  render() {
+    const g = this.game;
+    document.body.dataset.screen = g.screen;
+    document.getElementById('touch-controls')!.classList.toggle('active', g.screen === 'playing');
+    if (g.screen === 'playing') {
+      this.renderHUD();
+      return;
+    }
+    if (g.screen === 'menu') {
+      this.root.innerHTML = this.menu();
+    } else if (g.screen === 'intro') {
+      this.root.innerHTML = this.story();
+    } else if (g.screen === 'levelup') {
+      this.root.innerHTML = this.levelup();
+    } else if (g.screen === 'paused') {
+      this.root.innerHTML = this.pause();
+    } else if (g.screen === 'settings') {
+      this.root.innerHTML = this.settings();
+    } else if (g.screen === 'help') {
+      this.root.innerHTML = this.help();
+    } else if (g.screen === 'meta') {
+      this.root.innerHTML = this.meta();
+    } else if (g.screen === 'codex') {
+      this.root.innerHTML = this.codex();
+    } else if (g.screen === 'transition') {
+      this.root.innerHTML = this.transition();
+    } else if (g.screen === 'gameover' || g.screen === 'victory') {
+      this.root.innerHTML = this.ending(g.screen === 'victory');
+    }
+    requestAnimationFrame(() => {
+      const auto = this.root.querySelector<HTMLElement>('[data-autofocus]');
+      auto?.focus({ preventScroll: true });
+    });
+  }
+  brand() {
+    return `<div class="brand"><span class="brand-mark">✦</span><span>NOVAKI<small>A LITTLE LIGHT GOES A LONG WAY</small></span></div>`;
+  }
+  menu() {
+    const g = this.game;
+    return `<main class="menu-screen screen"><div class="illustration title-art"></div><div class="menu-wash"></div><header class="menu-header">${this.brand()}<div class="edition">AN EMBERBOUND ADVENTURE<span>VOLUME 01</span></div></header><section class="menu-content"><div class="eyebrow"><span></span> A SMALL HERO. AN IMPOSSIBLE DAWN.</div><h1>The Last<br><em>Light.</em></h1><p class="menu-description">A burnt match. A stolen sun.<br>There’s still a little fire in you.</p><div class="menu-actions">${this.button('<span>Begin your journey<small>A NEW RUN · ABOUT 20 MINUTES</small></span><b>↗</b>', 'new', 'primary start-button')}<div class="menu-second">${this.button('The hearth <span>✧ ' + g.save.meta.currency + '</span>', 'meta', 'secondary')}${this.button('Field notes <span>↗</span>', 'codex', 'secondary')}</div></div>${
+      g.save.meta.unlocks.length > 1
+        ? `<div class="starter"><span>FIRST SPARK</span>${['kindling', 'orbit', 'frost']
+            .map((id) => {
+              const u = UPGRADES.find((u) => u.id === id)!;
+              return `<button class="starter-option ${g.startingWeapon === id ? 'selected' : ''}" ${g.save.meta.unlocks.includes(id) ? `data-action="weapon" data-value="${id}"` : 'disabled'} title="${u.name}">${u.icon}</button>`;
+            })
+            .join('')}</div>`
+        : ''
+    }<div class="menu-links">${this.button('How to play', 'help', 'text-button')}${this.button('Settings', 'settings', 'text-button')}<span class="saved-tag">${g.save.meta.totalRuns ? 'PROGRESS SAVED LOCALLY' : 'KEYBOARD · CONTROLLER · TOUCH'}</span></div></section><footer class="menu-footer"><span>THREE WORLDS TO REKINDLE.</span><span class="footer-line"></span><span>ONE SMALL LIGHT TO KEEP.</span><span class="version">NOVAKI / 01</span></footer><div class="hero-caption"><span>“Still got a little spark.”</span><small>— NOVAKI</small></div></main>`;
+  }
+  story() {
+    return `<main class="screen story-screen"><div class="illustration title-art"></div><div class="menu-wash"></div><div class="story-card"><div class="eyebrow">PROLOGUE · THE THINGS WE KEEP</div><h1>Even a burnt match<br>remembers <em>fire.</em></h1><p>They said a burnt match had nothing left to give.</p><p>But when the last lantern went dark,<br>Novaki still carried a spark.</p><div class="story-rule"></div><p class="muted">Cross three forgotten worlds. Return their stolen light.<br>And find out what one little ember can do.</p>${this.button('Carry the spark <span>↗</span>', 'start', 'primary')}<small class="story-note">MOVE WITH WASD OR ARROWS · YOUR WEAPONS FIRE AUTOMATICALLY</small></div><div class="narration-indicator"><span></span> A STORY TOLD BY THE FIRE</div></main>`;
+  }
+  renderHUD() {
+    this.root.innerHTML = `<div class="hud"><div class="xp-track"><div id="xp-fill"></div></div><header class="hud-top"><div class="stage-label"><span id="chapter-label"></span><strong id="stage-name"></strong><small id="objective-label"></small></div><div class="run-time"><span id="run-clock">00:00</span><small id="wave-clock"></small></div><div class="vitals"><div class="health-label"><span>✦ NOVAKI</span><span id="health-number"></span></div><div class="health-track"><div id="health-fill"></div></div><div class="vitals-bottom"><span id="level-label"></span><span id="kill-label"></span></div></div>${this.button('Ⅱ', 'pause', 'pause-button')}</header><div class="boss-hud" id="boss-hud"><div><span id="boss-name"></span><span id="boss-phase"></span></div><div class="boss-track"><div id="boss-fill"></div></div></div><div class="chapter-banner" id="chapter-banner"><small></small><h2></h2><i></i></div><div class="game-toast" id="game-toast"><span>✧</span><div><strong></strong><small></small></div></div><div class="subtitle" id="subtitle"><small></small><p></p></div><footer class="hud-bottom"><div class="loadout"><div class="loadout-title"><span>YOUR LIGHT</span><span id="run-embers"></span></div><div class="weapon-slots" id="weapon-slots"></div><div class="passive-slots" id="passive-slots"></div></div><div class="control-hint" id="control-hint"><kbd>W A S D</kbd> MOVE <span>·</span> <kbd>SPACE</kbd> DASH <span>·</span> <kbd>ESC</kbd> PAUSE</div><div class="dash-display"><div class="dash-icon" id="dash-icon">↗<svg viewBox="0 0 60 60"><circle class="dash-track" cx="30" cy="30" r="27"/><circle id="dash-ring" cx="30" cy="30" r="27"/></svg></div><div><strong id="dash-text">DASH READY</strong><small>SPACE / A</small></div></div></footer><div class="tutorial-tip" id="tutorial-tip"><span>✦</span> Collect the green sparks to grow stronger.<small>Stay moving. Your weapons take care of the rest.</small></div></div>`;
+    this.update(0, true);
+  }
+  update(now: number, force = false) {
+    const g = this.game;
+    if (g.screen !== 'playing') return;
+    if (!force && now - this.lastHUD < 80) return;
+    this.lastHUD = now;
+    const p = g.player;
+    const set = (id: string, text: string) => {
+      const e = document.getElementById(id);
+      if (e && e.textContent !== text) e.textContent = text;
+    };
+    set('chapter-label', `CHAPTER ${roman(g.stage)} / III`);
+    set('stage-name', g.stageDef.name);
+    set(
+      'objective-label',
+      g.boss
+        ? 'RETURN THE STOLEN LIGHT'
+        : g.bossDefeated
+          ? 'THE DARKNESS IS LIFTING'
+          : 'SURVIVE UNTIL THE GUARDIAN WAKES',
+    );
+    set('run-clock', clock(g.time));
+    set(
+      'wave-clock',
+      g.boss
+        ? 'GUARDIAN ENCOUNTER'
+        : g.bossDefeated
+          ? 'LIGHT RETURNED'
+          : `${clock(Math.max(0, g.stageDef.duration - g.stageTime))} TO GUARDIAN`,
+    );
+    set('health-number', `${Math.ceil(p.hp)} / ${p.maxHp}`);
+    set('level-label', `LEVEL ${p.level}`);
+    set('kill-label', `${g.stats.kills} VANQUISHED`);
+    set('run-embers', `✧ ${Math.floor(g.stats.earned)}`);
+    document.getElementById('health-fill')!.style.width = `${(p.hp / p.maxHp) * 100}%`;
+    document.getElementById('health-fill')!.classList.toggle('low', p.hp / p.maxHp < 0.3);
+    document.getElementById('xp-fill')!.style.width = `${Math.min(100, (p.xp / p.nextXp) * 100)}%`;
+    const boss = document.getElementById('boss-hud')!;
+    boss.classList.toggle('visible', !!g.boss);
+    if (g.boss) {
+      set('boss-name', g.stageDef.bossName);
+      set('boss-phase', g.boss.phase === 1 ? 'GUARDIAN' : 'ENRAGED');
+      document.getElementById('boss-fill')!.style.width = `${(g.boss.hp / g.boss.maxHp) * 100}%`;
+    }
+    const banner = document.getElementById('chapter-banner')!;
+    banner.classList.toggle('visible', g.banner.timer > 0);
+    banner.querySelector('h2')!.textContent = g.banner.title;
+    banner.querySelector('small')!.textContent = g.banner.subtitle;
+    const toast = document.getElementById('game-toast')!;
+    toast.classList.toggle('visible', g.toast.timer > 0);
+    toast.querySelector('strong')!.textContent = g.toast.title;
+    toast.querySelector('small')!.textContent = g.toast.text;
+    const sub = document.getElementById('subtitle')!;
+    sub.classList.toggle('visible', g.subtitle.timer > 0);
+    sub.querySelector('small')!.textContent = g.subtitle.speaker;
+    sub.querySelector('p')!.textContent = g.subtitle.text;
+    set('dash-text', p.dashCd <= 0 ? 'DASH READY' : `${p.dashCd.toFixed(1)} SEC`);
+    document.getElementById('dash-icon')!.classList.toggle('ready', p.dashCd <= 0);
+    document.getElementById('dash-ring')!.style.strokeDashoffset = String(
+      (170 * p.dashCd) / p.dashMax,
+    );
+    const touch = document.getElementById('touch-dash')!;
+    touch.classList.toggle('cooldown', p.dashCd > 0);
+    touch.querySelector('small')!.textContent = p.dashCd > 0 ? p.dashCd.toFixed(1) : 'DASH';
+    const weaponHTML = Object.entries(g.upgrades)
+      .filter(([id]) => UPGRADES.find((u) => u.id === id)?.kind === 'weapon')
+      .map(([id, lv]) => {
+        const u = UPGRADES.find((u) => u.id === id)!;
+        return `<div class="weapon-slot ${g.isEvolved(id) ? 'evolved' : ''}" title="${u.name} · Rank ${lv}${g.isEvolved(id) ? ' · Evolved' : ''}" style="--item-color:${u.color}"><span>${u.icon}</span><small>${g.isEvolved(id) ? '✦' : roman(lv)}</small></div>`;
+      })
+      .join('');
+    const weapons = document.getElementById('weapon-slots')!;
+    const allWeaponHTML =
+      weaponHTML +
+      Array.from(
+        {
+          length:
+            6 -
+            Object.keys(g.upgrades).filter(
+              (id) => UPGRADES.find((u) => u.id === id)?.kind === 'weapon',
+            ).length,
+        },
+        () => '<div class="weapon-slot empty">·</div>',
+      ).join('');
+    if (weapons.innerHTML !== allWeaponHTML) weapons.innerHTML = allWeaponHTML;
+    const passives = Object.entries(g.upgrades)
+      .filter(([id]) => UPGRADES.find((u) => u.id === id)?.kind === 'passive')
+      .map(([id, lv]) => {
+        const u = UPGRADES.find((u) => u.id === id)!;
+        return `<span title="${u.name} · Rank ${lv}" style="color:${u.color}">${u.icon}<small>${lv}</small></span>`;
+      })
+      .join('');
+    const passiveEl = document.getElementById('passive-slots')!;
+    if (passiveEl.innerHTML !== passives) passiveEl.innerHTML = passives;
+    document.getElementById('tutorial-tip')!.classList.toggle('visible', g.time > 5 && g.time < 17);
+    document.getElementById('control-hint')!.style.opacity = g.time > 45 ? '0' : '1';
+  }
+  levelup() {
+    const g = this.game;
+    return `<main class="overlay levelup-screen"><div class="levelup-heading"><div class="eyebrow">LEVEL ${g.player.level} · A LITTLE BRIGHTER</div><h1>Feed the <em>flame.</em></h1><p>Choose a gift to carry into the dark.</p></div><div class="upgrade-cards">${g.choices
+      .map((u, i) => {
+        const lv = g.upgrades[u.id] || 0;
+        const evo = EVOLUTIONS.find((e) => e.weapon === u.id || e.passive === u.id);
+        const pair = evo
+          ? UPGRADES.find((t) => t.id === (evo.weapon === u.id ? evo.passive : evo.weapon))
+          : null;
+        const canEvolve =
+          evo &&
+          (g.upgrades[evo.weapon] || 0) + (u.id === evo.weapon ? 1 : 0) >= 5 &&
+          (g.upgrades[evo.passive] || 0) + (u.id === evo.passive ? 1 : 0) >= 2;
+        return `<button class="upgrade-card ${canEvolve ? 'evolution-ready' : ''}" data-action="upgrade" data-value="${i}" style="--item-color:${u.color}"><div class="card-top"><span>${lv ? 'ENHANCE' : u.kind === 'weapon' ? 'NEW WEAPON' : 'NEW KEEPSAKE'}</span><span class="choice-key">${i + 1}</span></div><div class="upgrade-icon">${u.icon}<i></i></div><div class="card-type">${u.kind === 'weapon' ? 'ARMAMENT' : 'PASSIVE'} <span>RANK ${roman(lv + 1)}</span></div><h2>${u.name}</h2><p class="upgrade-description">${u.description}</p><p class="upgrade-value">${u.perLevel}</p><div class="rank-pips">${Array.from({ length: u.maxLevel > 5 ? 1 : u.maxLevel }, (_, n) => `<i class="${n < lv ? 'filled' : n === lv ? 'next' : ''}"></i>`).join('')}</div><div class="synergy">${canEvolve ? `<b>✦ EVOLVES INTO ${evo!.name.toUpperCase()}</b>` : pair ? `<span>✧ EVOLUTION PAIR</span><strong>${pair.icon} ${pair.name}</strong>` : `<span>✧ A GIFT FROM THE DARK</span>`}</div><div class="card-select">TAKE THIS GIFT <span>↗</span></div></button>`;
+      })
+      .join(
+        '',
+      )}</div><div class="reroll-row"><button class="text-button reroll-button" data-action="reroll" ${g.rerolls <= 0 ? 'disabled' : ''}>↻  FIND ANOTHER SPARK <span>${g.rerolls} LEFT</span></button></div><p class="levelup-note">Weapons at rank V evolve with their paired keepsake at rank II. <span>CHOOSE WITH 1 · 2 · 3</span></p></main>`;
+  }
+  frame(content: string, wide = false) {
+    return `<main class="overlay page-overlay ${['menu', 'gameover', 'victory'].includes(this.game.previousScreen) ? 'menu-page' : ''}"><section class="panel ${wide ? 'wide-panel' : ''}">${content}</section></main>`;
+  }
+  pageHead(eyebrow: string, title: string) {
+    return `<div class="panel-head"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1></div>${this.button('← Back', 'back', 'text-button back-button')}</div>`;
+  }
+  pause() {
+    const g = this.game;
+    const owned = Object.entries(g.upgrades)
+      .map(([id, lv]) => {
+        const u = UPGRADES.find((u) => u.id === id);
+        return u
+          ? `<span title="${u.description}" style="--item-color:${u.color}"><b>${u.icon}</b>${u.name}<small>${roman(lv)}${g.isEvolved(id) ? ' ✦' : ''}</small></span>`
+          : '';
+      })
+      .join('');
+    return this.frame(
+      `<div class="eyebrow">TAKE A BREATH</div><h1>Keep the <em>light.</em></h1><p class="muted">${g.stageDef.name} · ${clock(g.time)} · Level ${g.player.level}</p><div class="pause-buttons">${this.button('Return to the fire <span>↗</span>', 'resume', 'primary')}${this.button('Settings', 'settings', 'secondary')}${this.button('How to play', 'help', 'secondary')}${this.button('Evolution guide', 'codex', 'secondary')}</div><div class="pause-loadout">${owned}</div>${this.button('End this run & keep embers', 'quit', 'text-button abandon')}<p class="footnote">Progress pauses here. Your embers are banked when the run ends.</p>`,
+    );
+  }
+  settings() {
+    const s = this.game.save.settings;
+    return this.frame(
+      `${this.pageHead('MAKE YOURSELF AT HOME', 'A little <em>comfort.</em>')}<div class="settings-list">${[
+        ['music', 'Music', 'Original scores for every world.'],
+        ['sound', 'Sound effects', 'Sparks, impacts, and little victories.'],
+        ['voice', 'Voice & narration', 'The dark has a few things to say.'],
+      ]
+        .map(
+          ([key, label, hint]) =>
+            `<label class="setting-range"><div><strong>${label}</strong><small>${hint}</small></div><div class="range-control"><input type="range" min="0" max="100" value="${Math.round(s[key as 'music'] * 100)}" data-setting="${key}" aria-label="${label} volume"><output>${Math.round(s[key as 'music'] * 100)}%</output></div></label>`,
+        )
+        .join('')}${[
+        ['shake', 'Screen shake', 'A little impact when the world strikes.'],
+        ['particles', 'Extra particles', 'Turn off for a quieter, faster battlefield.'],
+      ]
+        .map(
+          ([key, label, hint]) =>
+            `<div class="setting-toggle"><div><strong>${label}</strong><small>${hint}</small></div><button class="toggle ${s[key as 'shake'] ? 'on' : ''}" data-action="toggle" data-value="${key}" role="switch" aria-checked="${s[key as 'shake']}" aria-label="${label}"><span></span>${s[key as 'shake'] ? 'ON' : 'OFF'}</button></div>`,
+        )
+        .join('')}</div><p class="footnote">Settings are saved automatically in this browser.</p>`,
+    );
+  }
+  help() {
+    return this.frame(
+      `${this.pageHead('THE ART OF STAYING ALIGHT', 'One small <em>spark.</em>')}<div class="help-grid"><article><div class="help-num">01</div><h2>Keep moving.</h2><p>Your weapons aim and fire automatically. Circle the horde, leave yourself an escape, and dash through danger.</p><div class="key-row"><kbd>W A S D</kbd><span>or</span><kbd>↑ ← ↓ →</kbd></div><small>LEFT STICK / D-PAD · ON-SCREEN JOYSTICK</small></article><article><div class="help-num">02</div><h2>Find your opening.</h2><p>Dash briefly makes you invulnerable. Red circles warn of incoming attacks. Get clear before they fill.</p><div class="key-row"><kbd>SPACE</kbd><span>or</span><kbd>SHIFT</kbd></div><small>CONTROLLER A / RB · TOUCH DASH BUTTON</small></article><article><div class="help-num">03</div><h2>Feed the flame.</h2><p>Collect green experience sparks. Choose a gift each level. Carry up to six weapons and combine them with keepsakes.</p><div class="key-row"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><span>choose a gift</span></div><small>RANK V WEAPON + RANK II PAIRED KEEPSAKE = EVOLUTION</small></article><article><div class="help-num">04</div><h2>Bring back the dawn.</h2><p>Survive five minutes in each world, then defeat its guardian. Rekindle lanterns for healing and embers. Beat the third guardian to win.</p><div class="key-row"><kbd>ESC</kbd><span>pause anytime</span></div><small>EMBER CURRENCY PERSISTS · VISIT THE HEARTH BETWEEN RUNS</small></article></div><div class="help-footer"><p>Controllers: D-pad navigates menus, A confirms, B goes back, Start pauses.<br>On a phone, use the left joystick and right dash button. Landscape gives you a wider view.</p>${this.game.previousScreen === 'paused' ? '' : this.button('Replay the prologue', 'story', 'text-button')}</div>`,
+      true,
+    );
+  }
+  meta() {
+    const g = this.game;
+    return this.frame(
+      `${this.pageHead('SOMETHING TO COME HOME TO', 'The <em>hearth.</em>')}<div class="hearth-intro"><p>Every journey leaves an ember.<br>Make the next one a little brighter.</p><div class="currency-count">✧ <strong>${g.save.meta.currency}</strong><small>EMBERS TO KEEP</small></div></div><div class="meta-grid">${META_UPGRADES.map(
+        (m) => {
+          const lv = g.save.meta.upgrades[m.id] || 0,
+            cost = m.baseCost + m.stepCost * lv,
+            max = lv >= m.maxLevel;
+          return `<div class="meta-card"><span class="meta-icon">${m.icon}</span><div><h2>${m.name}</h2><p>${m.description}</p><div class="meta-pips">${Array.from({ length: m.maxLevel }, (_, i) => `<i class="${i < lv ? 'filled' : ''}"></i>`).join('')}</div></div><button class="meta-buy ${max ? 'maxed' : ''}" data-action="buy" data-value="${m.id}" ${max || g.save.meta.currency < cost ? 'disabled' : ''}>${max ? 'KEPT' : `✧ ${cost}`}<small>${max ? 'MAX RANK' : 'UPGRADE'}</small></button></div>`;
+        },
+      ).join(
+        '',
+      )}</div><div class="hearth-stats"><span><strong>${g.save.meta.totalRuns}</strong> JOURNEYS</span><span><strong>${g.save.meta.wins}</strong> DAWNS RETURNED</span><span><strong>${g.save.meta.totalKills.toLocaleString()}</strong> SHADOWS FACED</span></div><p class="footnote">Permanent upgrades apply at the start of your next run. Defeat guardians to unlock new starting weapons.</p>`,
+      true,
+    );
+  }
+  codex() {
+    const tabs = `<div class="codex-tabs">${[
+      ['evolutions', 'Evolutions'],
+      ['worlds', 'The three worlds'],
+      ['bestiary', 'The things in the dark'],
+    ]
+      .map(([id, name]) => this.button(name, 'tab', this.codexTab === id ? 'active' : '', id))
+      .join('')}</div>`;
+    let content = '';
+    if (this.codexTab === 'evolutions') {
+      content = `<p class="codex-intro">Every weapon has a brighter future. Reach weapon rank <b>V</b> and its paired keepsake rank <b>II</b> to evolve automatically.</p><div class="evolution-grid">${EVOLUTIONS.map(
+        (e) => {
+          const w = UPGRADES.find((u) => u.id === e.weapon)!,
+            p = UPGRADES.find((u) => u.id === e.passive)!;
+          return `<article class="evolution-entry"><span class="evolution-symbol" style="color:${e.color}">${w.icon}</span><div><small>${w.name} <b>V</b> + ${p.name} <b>II</b></small><h3>${e.name}</h3><p>${e.description}</p></div></article>`;
+        },
+      ).join('')}</div>`;
+    } else if (this.codexTab === 'worlds') {
+      content = `<div class="world-grid">${STAGES.map((s) => `<article><img src="${img(`boss${s.id}.png`)}" alt="${s.bossName}"><div class="eyebrow">CHAPTER ${roman(s.id)}</div><h2>${s.name}</h2><p>${s.description}</p><small>GUARDED BY ${s.bossName.toUpperCase()}</small></article>`).join('')}</div>`;
+    } else {
+      content = `<div class="bestiary-grid">${ENEMIES.map((e) => `<article><span style="color:${e.accent}">◇</span><div><small>CHAPTER ${roman(e.stage)}</small><h3>${e.name}</h3><p>${e.description}</p></div></article>`).join('')}</div>`;
+    }
+    return this.frame(
+      `${this.pageHead('NOTES FROM THE EDGE OF DARKNESS', 'A field <em>guide.</em>')}${tabs}${content}`,
+      true,
+    );
+  }
+  transition() {
+    const g = this.game,
+      next = STAGES[g.stage];
+    return `<main class="overlay transition-screen"><div class="transition-art"><img src="${img(`prop${g.stage}.png`)}" alt="A rekindled lantern"></div><div class="eyebrow">CHAPTER ${roman(g.stage)} COMPLETE</div><h1>A little less <em>darkness.</em></h1><p>${g.stageDef.story}</p><div class="chapter-path">${STAGES.map((s, i) => `<div class="${i < g.stage ? 'done' : ''} ${i === g.stage ? 'next' : ''}"><span>${i < g.stage ? '✦' : roman(i + 1)}</span><small>${s.name}</small></div>`).join('<i></i>')}</div><div class="transition-reward">✧ ${60 + g.stage * 30} EMBERS KEPT <span>·</span> HEALTH RESTORED</div>${this.button(`Enter ${next.name} <span>↗</span>`, 'continue', 'primary')}<p class="footnote">Your gifts travel with you. The next light is waiting.</p></main>`;
+  }
+  ending(victory: boolean) {
+    const g = this.game,
+      s = g.stats;
+    return `<main class="screen end-screen ${victory ? 'victory-screen' : ''}"><div class="illustration ${victory ? 'ending-art' : 'title-art'}"></div><div class="end-wash"></div><section class="end-content"><div class="eyebrow">${victory ? 'THREE LIGHTS RETURNED · ONE NEW DAWN' : 'THE FIRE RESTS. THE EMBER REMAINS.'}</div><h1>${victory ? 'You made<br><em>room for light.</em>' : 'Even embers<br><em>begin again.</em>'}</h1><p class="ending-prose">${victory ? 'A match only burns once. Or so the world believed.<br>Novaki taught the dark to make a little room for everyone.' : 'The dark was a little too deep this time.<br>But nothing you carried home was lost.'}</p><div class="result-stats"><div><strong>${clock(g.time)}</strong><span>TIME ALIGHT</span></div><div><strong>${s.kills.toLocaleString()}</strong><span>SHADOWS FACED</span></div><div><strong>${s.bosses} / 3</strong><span>LIGHTS RETURNED</span></div><div><strong>${g.player.level}</strong><span>FINAL LEVEL</span></div><div><strong>${g.evolved.size}</strong><span>EVOLUTIONS</span></div><div class="earned"><strong>✧ ${Math.floor(s.earned)}</strong><span>EMBERS BANKED</span></div></div><div class="end-loadout">${Object.entries(
+      g.upgrades,
+    )
+      .filter(([id]) => UPGRADES.find((u) => u.id === id)?.kind === 'weapon')
+      .map(([id, lv]) => {
+        const u = UPGRADES.find((u) => u.id === id)!;
+        return `<span title="${u.name} rank ${lv}" style="color:${u.color}">${u.icon}<small>${g.isEvolved(id) ? '✦' : roman(lv)}</small></span>`;
+      })
+      .join(
+        '',
+      )}</div><div class="end-actions">${this.button(victory ? 'One more little spark ↗' : 'Try again ↗', 'retry', 'primary')}${this.button('Visit the hearth', 'meta', 'secondary')}${this.button('Main menu', 'menu', 'text-button')}</div><p class="footnote">${victory ? 'THE END · THANK YOU FOR CARRYING THE SPARK' : 'Your permanent upgrades and embers are saved in this browser.'}</p></section></main>`;
+  }
 }

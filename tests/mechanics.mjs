@@ -12,28 +12,38 @@ try {
   const context = await browser.newContext();
   const page = await context.newPage();
   const errors = [];
-  page.on('pageerror', error => errors.push(error.message));
-  page.on('console', message => {
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text());
   });
-  await page.route('**/__mechanics', route => route.fulfill({
-    contentType: 'text/html',
-    body: '<!doctype html><html lang="en"><body><div id="ui"></div><div id="joystick"><div class="stick-knob"></div></div><button id="touch-dash">Dash</button></body></html>',
-  }));
+  await page.route('**/__mechanics', (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: '<!doctype html><html lang="en"><body><div id="ui"></div><div id="joystick"><div class="stick-knob"></div></div><button id="touch-dash">Dash</button></body></html>',
+    }),
+  );
   await page.goto(`${baseURL}/__mechanics`);
   const results = await page.evaluate(async () => {
     const { Game } = await import('/src/game.ts');
     const { UPGRADES, EVOLUTIONS, META_UPGRADES } = await import('/src/content.ts');
     const results = [];
     const dt = 1 / 60;
-    const assert = (condition, message) => { if (!condition) throw new Error(message); };
-    const equal = (actual, expected, message) => assert(actual === expected, `${message}: expected ${expected}, received ${actual}`);
-    const near = (actual, expected, message) => assert(Math.abs(actual - expected) < 1e-7, `${message}: expected ${expected}, received ${actual}`);
-    const snapshot = value => JSON.stringify(value);
+    const assert = (condition, message) => {
+      if (!condition) throw new Error(message);
+    };
+    const equal = (actual, expected, message) =>
+      assert(actual === expected, `${message}: expected ${expected}, received ${actual}`);
+    const near = (actual, expected, message) =>
+      assert(
+        Math.abs(actual - expected) < 1e-7,
+        `${message}: expected ${expected}, received ${actual}`,
+      );
+    const snapshot = (value) => JSON.stringify(value);
     function fresh(clearSave = true) {
       if (clearSave) localStorage.clear();
       const game = new Game();
-      for (const method of ['unlock', 'playMusic', 'stopVoice', 'speak', 'sfx', 'suspend']) game.audio[method] = () => {};
+      for (const method of ['unlock', 'playMusic', 'stopVoice', 'speak', 'sfx', 'suspend'])
+        game.audio[method] = () => {};
       game.input.poll = () => {};
       return game;
     }
@@ -72,7 +82,7 @@ try {
       game.tick(dt);
       near(enemy.hp, enemyHp - 18, 'The first contact retaliates');
       near(game.player.hp, playerHp - enemy.damage, 'The first contact hurts the player');
-      advance(game, .5);
+      advance(game, 0.5);
       assert(game.player.invuln > 0, 'The player remains in the invulnerability window');
       near(enemy.hp, enemyHp - 18, 'Repeated overlap during invulnerability cannot retaliate');
       near(game.player.hp, playerHp - enemy.damage, 'Repeated overlap cannot hurt the player');
@@ -89,14 +99,14 @@ try {
 
     test('Evolution requires weapon rank 5 and companion rank 2', () => {
       const game = startFixture();
-      const evolution = EVOLUTIONS.find(item => item.weapon === 'kindling');
+      const evolution = EVOLUTIONS.find((item) => item.weapon === 'kindling');
       assert(evolution, 'Kindling has an evolution definition');
       game.upgrades = { [evolution.weapon]: 4, [evolution.passive]: 1 };
       game.recalculate();
-      const take = id => {
+      const take = (id) => {
         game.addXp(game.player.nextXp);
         equal(game.screen, 'levelup', 'Experience opens the real level-up screen');
-        game.choices = [UPGRADES.find(item => item.id === id)];
+        game.choices = [UPGRADES.find((item) => item.id === id)];
         game.chooseUpgrade(0);
       };
       take(evolution.weapon);
@@ -130,7 +140,10 @@ try {
       equal(game.player.level, level, 'Reroll does not grant a level');
       equal(game.player.xp, xp, 'Reroll does not grant or consume experience');
       equal(snapshot(game.upgrades), owned, 'Reroll does not grant upgrades');
-      assert(game.choices.length > 0 && game.choices.length <= 3, 'Reroll produces a valid choice set');
+      assert(
+        game.choices.length > 0 && game.choices.length <= 3,
+        'Reroll produces a valid choice set',
+      );
       game.reroll();
       game.reroll();
       equal(game.rerolls, 0, 'Three rerolls exhaust the allowance');
@@ -174,15 +187,17 @@ try {
         game.spawnBoss();
         assert(game.boss, 'The real boss is spawned');
         const initialHp = game.boss.maxHp;
-        game.damageBoss(initialHp * .55);
+        game.damageBoss(initialHp * 0.55);
         game.tick(dt);
         equal(game.boss.phase, 2, 'Crossing half health enables phase two');
         equal(game.state().boss.phase, 2, 'QA reports phase two');
-        let sawShots = false, sawHazards = false, sawSummons = false;
+        let sawShots = false,
+          sawHazards = false,
+          sawSummons = false;
         for (let frame = 0; frame < 600; frame++) {
           game.tick(dt);
-          sawShots ||= game.projectiles.some(shot => shot.hostile);
-          sawHazards ||= game.hazards.some(hazard => hazard.kind !== 'mine');
+          sawShots ||= game.projectiles.some((shot) => shot.hostile);
+          sawHazards ||= game.hazards.some((hazard) => hazard.kind !== 'mine');
           sawSummons ||= game.enemies.length > 0;
         }
         assert(sawShots, `Stage ${stage} phase two fires actual hostile projectiles`);
@@ -210,7 +225,10 @@ try {
         } else {
           equal(game.screen, 'victory', 'The third defeated boss wins the run');
           equal(game.save.meta.wins, 1, 'Victory is persisted');
-          assert(game.save.meta.unlocks.includes('orbit') && game.save.meta.unlocks.includes('frost'), 'Boss milestones unlock their starting weapons');
+          assert(
+            game.save.meta.unlocks.includes('orbit') && game.save.meta.unlocks.includes('frost'),
+            'Boss milestones unlock their starting weapons',
+          );
         }
         bosses.push({ stage, phase: 2, shots: sawShots, hazards: sawHazards, summons: sawSummons });
       }
@@ -229,7 +247,17 @@ try {
         ];
         if (phase === 'enemy') game.spawnEnemy('sootling', false, 0, 0);
         if (phase === 'projectile') game.enemyShot(0, 0, 0, 0, 10);
-        if (phase === 'hazard') game.hazards.push({ x: 0, y: 0, radius: 50, timer: 0, duration: 1, damage: 10, kind: 'blast', fired: false });
+        if (phase === 'hazard')
+          game.hazards.push({
+            x: 0,
+            y: 0,
+            radius: 50,
+            timer: 0,
+            duration: 1,
+            damage: 10,
+            kind: 'blast',
+            fired: false,
+          });
         if (phase === 'boss') {
           game.spawnBoss();
           game.boss.x = game.player.x;
@@ -242,7 +270,10 @@ try {
         equal(game.player.xp, 0, `${phase} death cannot collect experience`);
         equal(game.stats.healed, 0, `${phase} death cannot record postmortem healing`);
         equal(game.save.meta.currency, 10, `${phase} death banks only the legitimate run bonus`);
-        assert(game.pickups.every(pickup => pickup.value === 50), `${phase} death leaves pickups unconsumed`);
+        assert(
+          game.pickups.every((pickup) => pickup.value === 50),
+          `${phase} death leaves pickups unconsumed`,
+        );
       }
       return { phases };
     });
@@ -253,10 +284,26 @@ try {
       advance(game, 1);
       game.pause();
       equal(game.screen, 'paused', 'Pause enters the paused screen');
-      const before = snapshot({ time: game.time, stageTime: game.stageTime, player: game.player, enemies: game.enemies, projectiles: game.projectiles });
+      const before = snapshot({
+        time: game.time,
+        stageTime: game.stageTime,
+        player: game.player,
+        enemies: game.enemies,
+        projectiles: game.projectiles,
+      });
       game.input.x = 1;
       advance(game, 5);
-      equal(snapshot({ time: game.time, stageTime: game.stageTime, player: game.player, enemies: game.enemies, projectiles: game.projectiles }), before, 'Time, movement, combat, and cooldowns remain frozen');
+      equal(
+        snapshot({
+          time: game.time,
+          stageTime: game.stageTime,
+          player: game.player,
+          enemies: game.enemies,
+          projectiles: game.projectiles,
+        }),
+        before,
+        'Time, movement, combat, and cooldowns remain frozen',
+      );
       const frozenTime = game.time;
       game.resume();
       game.input.x = 1;
@@ -269,19 +316,31 @@ try {
       const game = startFixture();
       game.earn(500);
       game.endRun(false);
-      const vigor = META_UPGRADES.find(item => item.id === 'vigor');
+      const vigor = META_UPGRADES.find((item) => item.id === 'vigor');
       assert(vigor, 'The permanent health upgrade exists');
       const balance = game.save.meta.currency;
       equal(game.buyMeta('vigor'), true, 'A funded permanent upgrade can be purchased');
-      equal(game.save.meta.currency, balance - vigor.baseCost, 'The purchase deducts its real catalog price');
+      equal(
+        game.save.meta.currency,
+        balance - vigor.baseCost,
+        'The purchase deducts its real catalog price',
+      );
       const expectedMeta = snapshot(game.save.meta);
       const reloaded = fresh(false);
-      equal(snapshot(reloaded.save.meta), expectedMeta, 'A newly constructed game loads the saved progression');
+      equal(
+        snapshot(reloaded.save.meta),
+        expectedMeta,
+        'A newly constructed game loads the saved progression',
+      );
       reloaded.start({ seed: 78 });
       equal(reloaded.player.maxHp, 110, 'The purchased rank changes the next run');
       equal(reloaded.player.hp, 110, 'The next run begins at its upgraded maximum health');
       equal(reloaded.save.meta.totalRuns, 1, 'Historical run statistics remain saved');
-      return { vigor: reloaded.save.meta.upgrades.vigor, nextRunHp: reloaded.player.maxHp, currency: reloaded.save.meta.currency };
+      return {
+        vigor: reloaded.save.meta.upgrades.vigor,
+        nextRunHp: reloaded.player.maxHp,
+        currency: reloaded.save.meta.currency,
+      };
     });
     return results;
   });

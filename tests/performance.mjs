@@ -10,16 +10,24 @@ const viewport = { width: 1440, height: 900 };
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport, deviceScaleFactor: 1 });
 const errors = [];
-page.on('pageerror', error => errors.push(error.message));
-page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+page.on('pageerror', (error) => errors.push(error.message));
+page.on('console', (message) => {
+  if (message.type() === 'error') errors.push(message.text());
+});
 
 // A development hot reload would invalidate the sample. The shipped game uses
 // no WebSockets; this isolates the benchmark from unrelated edits to Vite files.
 await page.addInitScript(() => {
   window.WebSocket = class {
-    static CONNECTING = 0; static OPEN = 1; static CLOSING = 2; static CLOSED = 3;
+    static CONNECTING = 0;
+    static OPEN = 1;
+    static CLOSING = 2;
+    static CLOSED = 3;
     readyState = 0;
-    addEventListener() {} removeEventListener() {} send() {} close() {}
+    addEventListener() {}
+    removeEventListener() {}
+    send() {}
+    close() {}
   };
 });
 
@@ -32,19 +40,30 @@ try {
     return extension ? gl.getParameter(extension.UNMASKED_RENDERER_WEBGL) : 'Unavailable';
   });
   const report = {
-    url, date: new Date().toISOString(), browser: await browser.version(),
-    cpu: os.cpus()[0]?.model, logicalCpus: os.availableParallelism(), gpu,
-    viewport, deviceScaleFactor: 1, seed: 1729, warmupMs, sampleMs, samples: [], errors,
+    url,
+    date: new Date().toISOString(),
+    browser: await browser.version(),
+    cpu: os.cpus()[0]?.model,
+    logicalCpus: os.availableParallelism(),
+    gpu,
+    viewport,
+    deviceScaleFactor: 1,
+    seed: 1729,
+    warmupMs,
+    sampleMs,
+    samples: [],
+    errors,
   };
   console.log(JSON.stringify({ browser: report.browser, cpu: report.cpu, gpu, viewport }));
   for (const count of counts) {
-    await page.evaluate(count => {
+    await page.evaluate((count) => {
       window.NOVAKI_QA.start({ seed: 1729 });
       window.NOVAKI_QA.setInvincible(true);
       window.NOVAKI_QA.spawnEnemies(count);
-      if (!window.perfAutoChoice) window.perfAutoChoice = setInterval(() => {
-        if (window.NOVAKI_QA.state().screen === 'levelup') window.NOVAKI_QA.chooseUpgrade(0);
-      }, 50);
+      if (!window.perfAutoChoice)
+        window.perfAutoChoice = setInterval(() => {
+          if (window.NOVAKI_QA.state().screen === 'levelup') window.NOVAKI_QA.chooseUpgrade(0);
+        }, 50);
     }, count);
     await page.waitForTimeout(warmupMs);
     await page.evaluate(() => {
@@ -68,13 +87,16 @@ try {
       const average = values.reduce((sum, value) => sum + value, 0) / values.length;
       const state = window.NOVAKI_QA.state();
       return {
-        screen: state.screen, enemies: state.enemies, stage: state.stage, runTime: state.time,
+        screen: state.screen,
+        enemies: state.enemies,
+        stage: state.stage,
+        runTime: state.time,
         fps: Number((1000 / average).toFixed(2)),
-        p95FrameMs: Number(sorted[Math.floor(sorted.length * .95)].toFixed(2)),
+        p95FrameMs: Number(sorted[Math.floor(sorted.length * 0.95)].toFixed(2)),
         frames: values.length,
       };
     });
-    if (sample.screen !== 'playing' || sample.enemies < count * .75) {
+    if (sample.screen !== 'playing' || sample.enemies < count * 0.75) {
       throw new Error(`Invalid performance fixture: ${JSON.stringify(sample)}`);
     }
     report.samples.push({ requestedEnemies: count, ...sample });
